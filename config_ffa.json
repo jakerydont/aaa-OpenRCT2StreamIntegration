@@ -3,6 +3,9 @@
         "botName": "RCT Bot"
     },
     "callbackPort": 8080,
+    "verbose": true,
+	"blacklist": [
+	],
     "interactions": [
         {
             "trigger": {
