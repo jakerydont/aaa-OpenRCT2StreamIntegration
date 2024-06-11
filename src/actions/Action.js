@@ -1,6 +1,9 @@
 
 class Action {
     constructor(actionManager) {
+        /**
+         * @type {import("../ActionManager.js")}
+         */
         this.actionManager = actionManager;
         this.identifier = "NONE";
     }

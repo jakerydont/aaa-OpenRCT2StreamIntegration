@@ -62,6 +62,12 @@ class ActionManager {
         }
     }
 
+    /**
+     * Registers a new action with the ActionManager.
+     * 
+     * @param {Function} type - The type of the action to register.
+     * @param {string} [identifier=null] - The identifier for the action. If not provided, the action's default identifier will be used.
+     */
     registerAction(type, identifier = null) {
         let newAction = new type(this);
 
@@ -74,7 +80,16 @@ class ActionManager {
         this.actions[newAction.identifier] = newAction;
     }
 
+    /**
+     * Triggers an action based on the provided action identifier and parameters.
+     * @param {string} actionIdentifier - The identifier of the action to trigger.
+     * @param {any} params - The parameters to pass to the action's trigger method.
+     */
     trigger(actionIdentifier, params) {
+        /**
+         * Represents an action.
+         * @type {Action}
+         */
         const action = this.actions[actionIdentifier];
         if (action) {
             action.trigger(params);
@@ -90,6 +105,15 @@ class ActionManager {
         });
     }
 
+    /**
+     * Builds and returns a parameter object with default values.
+     *
+     * @param {Object} params - The parameter object.
+     * @param {string} [params.username="anonymous"] - The username.
+     * @param {boolean} [params.subscriber=false] - Indicates if the user is a subscriber.
+     * @param {string} [params.input=""] - The input value.
+     * @returns {Object} - The parameter object with default values.
+     */
     buildParams(params) {
         let defaults = {
             username: "anonymous",

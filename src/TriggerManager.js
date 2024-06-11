@@ -1,7 +1,18 @@
 
 
 class TriggerManager {
+    /**
+     * Represents a TriggerManager object.
+     * @constructor
+     * @param {import("./ActionManager.js")} actionManager - The action manager.
+     * @param {Object} config - The configuration object.
+     * @param {boolean} [config.verbose=false] - Whether to enable verbose logging.
+     * @param {Array} config.interactions - The interactions array.
+     */
     constructor(actionManager, config) {
+        /**
+         * @type {import("./ActionManager.js")}
+         */
         this.actionManager = actionManager;
 		this.verbose = config.verbose || false;
 
