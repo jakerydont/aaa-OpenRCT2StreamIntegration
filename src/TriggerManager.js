@@ -3,7 +3,9 @@
 class TriggerManager {
     constructor(actionManager, config) {
         this.actionManager = actionManager;
+		this.verbose = config.verbose || false;
 
+        
         this.interactions = config.interactions;
     }
 
@@ -56,7 +58,7 @@ class TriggerManager {
                 }
                 return newParams;
             }
-
+            
             if (interaction.trigger.type == type) {
                 if (type == "COMMAND") {
                     let firstPart = params.message.split(" ")[0];
