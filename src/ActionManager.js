@@ -58,6 +58,7 @@ class ActionManager {
 
     send(data) {
         if (this.activeSocket) {
+            console.log("Sending data to OpenRCT2 plugin: " + JSON.stringify(data));
             this.activeSocket.write(JSON.stringify(data));
         }
     }

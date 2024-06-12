@@ -1,6 +1,8 @@
 const TwitchCom = require("./TwitchCom");
 const ActionManager = require("./ActionManager");
 const TriggerManager = require("./TriggerManager");
+const TikTokChatReaderServer = require("./TikTokReader/server.js");
+const TitTokChatReader = require("./TikTokReader/public/app.js");
 
 class App {
     constructor(config) {
@@ -8,13 +10,17 @@ class App {
 
         this.actionManager = new ActionManager(this);
         this.triggerManager = new TriggerManager(this.actionManager, config);
-
+        this.tikTokChatReaderServer = new TikTokChatReaderServer(this.actionManager,this.triggerManager,config,this);
+        //this.tikTokChatTriggerManager = new TitTokChatReader(this);
         this.readyFlag = 0;
     }
+
 
     connect() {
         this.twitchCom.connect();
         this.actionManager.connect();
+        this.tikTokChatReaderServer.connect();
+        //this.tikTokChatTriggerManager.connect();
     }
 
     addReadyFlag(mask) {
