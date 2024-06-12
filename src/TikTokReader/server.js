@@ -82,10 +82,14 @@ class TikTokChatReaderServer {
             //tiktokConnectionWrapper.connection.on('roomUser', msg => console.log('roomUser', msg));
             //tiktokConnectionWrapper.connection.on('member', msg => console.log('member', msg));
             tiktokConnectionWrapper.connection.on('chat', (msg) => { 
-                console.log('chat', msg.comment)
+                console.log("TIKTOK: ", msg.uniqueId, msg.comment)
                 this.triggerManager.trigger('COMMAND', {username: msg.uniqueId, subscriber:msg.isSubscriber,message: msg.comment});
             });
-            //tiktokConnectionWrapper.connection.on('gift', msg => console.log('gift', msg));
+            
+            tiktokConnectionWrapper.connection.on('gift', msg => {
+                console.log('TT GIFT: ', msg.uniqueId, msg.giftName, msg.diamondCount);
+                this.triggerManager.trigger('CHANNEL_POINTS_REWARD', {username: msg.uniqueId, subscriber:msg.isSubscriber,rewardTitle: "Thanos"});
+            });
             //tiktokConnectionWrapper.connection.on('social', msg => console.log('social', msg.chat));
             //tiktokConnectionWrapper.connection.on('like', msg => console.log('like', msg));
             //tiktokConnectionWrapper.connection.on('questionNew', msg => console.log('questionNew', msg));
