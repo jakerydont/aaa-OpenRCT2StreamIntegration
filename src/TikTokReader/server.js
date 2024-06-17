@@ -87,8 +87,16 @@ class TikTokChatReaderServer {
             });
             
             tiktokConnectionWrapper.connection.on('gift', msg => {
-                console.log('TT GIFT: ', msg.uniqueId, msg.giftName, msg.diamondCount);
-                this.triggerManager.trigger('CHANNEL_POINTS_REWARD', {username: msg.uniqueId, subscriber:msg.isSubscriber,rewardTitle: "Thanos"});
+                if (msg.diamondCount >= 10) {
+                    console.log('TT GIFT: ', msg.uniqueId, msg.giftName, msg.diamondCount);
+                    this.triggerManager.trigger('CHANNEL_POINTS_REWARD', 
+                        {
+                            username: msg.uniqueId,
+                            subscriber:msg.isSubscriber,
+                            rewardTitle: "Thanos"
+                        }
+                    );
+                }
             });
             //tiktokConnectionWrapper.connection.on('social', msg => console.log('social', msg.chat));
             //tiktokConnectionWrapper.connection.on('like', msg => console.log('like', msg));
