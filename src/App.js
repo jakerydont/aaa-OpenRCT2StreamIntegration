@@ -3,6 +3,7 @@ const ActionManager = require("./ActionManager");
 const TriggerManager = require("./TriggerManager");
 const TikTokChatReaderServer = require("./TikTokReader/server.js");
 const TitTokChatReader = require("./TikTokReader/public/app.js");
+const YouTubeReader = require("./YouTubeReader/livechat.js");
 
 class App {
     constructor(config) {
@@ -11,7 +12,7 @@ class App {
         this.actionManager = new ActionManager(this);
         this.triggerManager = new TriggerManager(this.actionManager, config);
         this.tikTokChatReaderServer = new TikTokChatReaderServer(this.actionManager,this.triggerManager,config,this);
-        //this.tikTokChatTriggerManager = new TitTokChatReader(this);
+        this.youTubeReader = new YouTubeReader(this.actionManager,this.triggerManager,config,this);
         this.readyFlag = 0;
     }
 
@@ -20,6 +21,7 @@ class App {
         this.twitchCom.connect();
         this.actionManager.connect();
         this.tikTokChatReaderServer.connect();
+        this.youTubeReader.connect();
         //this.tikTokChatTriggerManager.connect();
     }
 
