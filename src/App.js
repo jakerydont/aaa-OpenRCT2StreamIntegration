@@ -3,7 +3,7 @@ const ActionManager = require("./ActionManager");
 const TriggerManager = require("./TriggerManager");
 const TikTokChatReaderServer = require("./TikTokReader/server.js");
 const TitTokChatReader = require("./TikTokReader/public/app.js");
-const YouTubeReader = require("./YouTubeReader/livechat.js");
+const YouTubeReader = require("./YouTubeChatReader/livechat.js");
 
 class App {
     constructor(config) {
