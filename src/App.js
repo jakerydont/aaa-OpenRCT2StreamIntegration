@@ -22,7 +22,7 @@ class App {
         this.actionManager.connect();
         this.tikTokChatReaderServer.connect();
         this.youTubeReader.connect();
-        //this.tikTokChatTriggerManager.connect();
+
     }
 
     addReadyFlag(mask) {
