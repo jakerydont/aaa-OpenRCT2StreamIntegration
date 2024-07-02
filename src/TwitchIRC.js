@@ -51,7 +51,7 @@ class TwitchIRC {
                     message: "",
                     username: data.data[0].display_name,
                     subscriber: false
-                });
+                }, "TWITCH");
             });
         });//*/
 

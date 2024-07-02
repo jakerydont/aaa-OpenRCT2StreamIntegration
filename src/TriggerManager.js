@@ -16,20 +16,41 @@ class TriggerManager {
         this.actionManager = actionManager;
 		this.verbose = config.verbose || false;
 
-        
-        this.interactions = config.interactions;
+        this.youtubeInteractions = config.youtube.interactions;
+        this.tiktokInteractions = config.tiktok.interactions;
+        this.twitchInteractions = config.twitch.interactions;
+        this.globalInteractions = config.interactions;
     }
 
-    trigger(type, params) {
-        for (let i = 0; i < this.interactions.length; i++) {
-            let interaction = this.interactions[i];
+    trigger(type, params, source="") {
+        let success = false;
+        if (source == "TWITCH") {
+           success = this.processInteraction(this.twitchInteractions, params, type);
+        }
+        else if (source == "YOUTUBE") {
+            success =  this.processInteraction(this.youtubeInteractions, params, type);
+        } else if (source == "TIKTOK") {
+            success = this.processInteraction(this.tiktokInteractions, params, type);
+        }
+
+
+        if (!success) {
+           success =  this.processInteraction(this.globalInteractions, params, type);
+        }
+
+        if (this.verbose && !success) {
+            console.warn(`No interaction found for ${type} with params ${JSON.stringify(params)}`);
+        }
+    }
+
+    processInteraction(interactions, params, type) {
+        for (let i = 0; i < interactions.length; i++) {
+            let interaction = interactions[i];
 
             let trigger = interaction.trigger;
 
             function appendActionParams(oldParams) {
-                let newParams = {
-
-                };
+                let newParams = {};
                 for (let key in oldParams) {
                     newParams[key] = oldParams[key];
                 }
@@ -46,9 +67,7 @@ class TriggerManager {
             }
 
             function applyLimits() {
-                let newParams = {
-
-                };
+                let newParams = {};
                 for (let key in params) {
                     newParams[key] = params[key];
                 }
@@ -69,7 +88,7 @@ class TriggerManager {
                 }
                 return newParams;
             }
-            
+
             if (interaction.trigger.type == type) {
                 if (type == "COMMAND") {
                     let firstPart = params.message.split(" ")[0];
@@ -79,6 +98,7 @@ class TriggerManager {
                         let newParams = applyLimits();
                         newParams = appendActionParams(newParams);
                         this.actionManager.trigger(interaction.action, newParams);
+                        return true;
                     }
                 }
                 else if (type == "CHANNEL_POINTS_REWARD") {
@@ -86,6 +106,7 @@ class TriggerManager {
                         let newParams = applyLimits();
                         newParams = appendActionParams(newParams);
                         this.actionManager.trigger(interaction.action, newParams);
+                        return true;
                     }
                 }
                 else if (type == "SUBSCRIPTION") {
@@ -98,14 +119,21 @@ class TriggerManager {
                         newParams.message = newParams.username;
                     }
                     this.actionManager.trigger(interaction.action, newParams);
+                    return true;
                 }
                 else if (type == "VIEWER_JOINS") {
                     let newParams = applyLimits();
                     newParams = appendActionParams(newParams);
                     this.actionManager.trigger(interaction.action, newParams);
-                }
+                    return true;
+                } 
+  
+
+
             }
+         
         }
+        return false;
     }
 }
 

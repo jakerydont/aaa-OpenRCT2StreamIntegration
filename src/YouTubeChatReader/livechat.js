@@ -18,14 +18,28 @@ class YouTubeLiveChatReader {
       console.error('YouTube: Seems you haven\'t supplied your API Key yet!');
       return;
     }
+    
   }
 
   async connect() {
-    this.chatId = await this.getChatId(this.config.youtube.videoID);
+    this.liveVideoId = await this.getLiveVideoId();
+    if (!this.liveVideoId) {
+      this.liveVideoId = this.config.youtube.liveVideoId;
+    }
+
+    this.chatId = await this.getChatId(this.liveVideoId);
     setInterval(() => {
       this.getChatMessages();
     }, this.pollInterval);
   }
+
+  async getLiveVideoId() {
+    var res = await fetch(
+      //`https://www.googleapis.com/youtube/v3/liveBroadcasts?part=snippet&broadcastStatus=all&broadcastType=all&mine=true`
+      `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${this.config.youtube.channelId}&key=${secret.apiKey}`
+    );
+  }
+
   async getUserName(userId) {
 
     let error;
@@ -51,7 +65,7 @@ class YouTubeLiveChatReader {
         throw error;
       }
     } catch {
-      console.log('Oops! ' + error);
+      console.log('Oops! ' + error + this.liveVideoId);
     }
   }
 
@@ -109,7 +123,13 @@ class YouTubeLiveChatReader {
                 printedMessages++;
                 console.log("YOUTUBE: ", printedMessages, authorChannelName, data.items[i].snippet.displayMessage);
 
-                this.triggerManager.trigger('COMMAND', { username: authorChannelName, subscriber: false, message: data.items[i].snippet.displayMessage });
+                this.triggerManager.trigger(
+                  'COMMAND', 
+                  { 
+                    username: authorChannelName, subscriber: false, message: data.items[i].snippet.displayMessage 
+                  },
+                  'YOUTUBE'
+                );
 
               }
               //console.log(data.items[i]);
@@ -130,7 +150,7 @@ class YouTubeLiveChatReader {
         throw error;
       }
     } catch (error) {
-      console.log('Oops! ' + error);
+      console.log('Oops! ' + error + " " + this.liveVideoId);
     }
   }
 
