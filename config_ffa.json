@@ -1,6 +1,17 @@
 {
     "twitch": {
-        "botName": "RCT Bot"
+        "botName": "RCT Bot",
+        "interactions":[]
+    },
+    "tiktok": {
+        "uniqueID": "",
+        "interactions":[]
+    },
+    "youtube": {
+        "channelId": "",
+        "liveVideoId": "-",
+        "pollInterval": 5000,
+        "interactions": []
     },
     "callbackPort": 8080,
     "verbose": true,
