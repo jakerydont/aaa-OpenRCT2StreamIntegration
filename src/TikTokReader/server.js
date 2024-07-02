@@ -87,7 +87,7 @@ class TikTokChatReaderServer {
             });
             
             tiktokConnectionWrapper.connection.on('gift', msg => {
-                if (msg.diamondCount >= 10) {
+                if (msg.diamondCount >= 5) {
                     console.log('TT GIFT: ', msg.uniqueId, msg.giftName, msg.diamondCount);
                     this.triggerManager.trigger('CHANNEL_POINTS_REWARD', 
                         {
