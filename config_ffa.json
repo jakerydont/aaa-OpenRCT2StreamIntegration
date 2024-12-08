@@ -9,7 +9,6 @@
     },
     "youtube": {
         "channelId": "",
-        "liveVideoId": "-",
         "pollInterval": 5000,
         "interactions": []
     },
