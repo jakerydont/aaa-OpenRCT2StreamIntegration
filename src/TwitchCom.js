@@ -1,258 +1,218 @@
-const https = require('https');
-const opn = require('opn');
+const https   = require('https');
+const opn     = require('opn');
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const fs      = require('fs');
+const path    = require('path');
 
-const PubSub = require("./PubSub");
-const TwitchIRC = require("./TwitchIRC");
+// only EventSub here, PubSub is gone
+const EventSub = require('./EventSub');
+// if you need IRC still, uncomment this
+// const TwitchIRC = require('./TwitchIRC');
 
 class TwitchCom {
-    constructor(config, app) {
-        this.app = app;
-        this.appClientID = config.appConfig.appClientID;
-        this.redirectUri = config.appConfig.redirectUri;
+  constructor(config, app) {
+    this.app            = app;
+    this.config         = config;
+    this.appClientID    = config.appConfig.appClientID;
+    this.redirectUri    = config.appConfig.redirectUri;
+    this.webServerPort  = config.callbackPort;
+    this.channelID      = '';
+    this.channelName    = '';
+    this.storedAccessToken = '';
 
-        this.channelID = "";
-        this.channelName = "";
+    // load any previous token
+    if (fs.existsSync('access_token.bin')) {
+      this.storedAccessToken = fs.readFileSync('access_token.bin', 'utf8');
+    }
 
-        this.storedAccessToken = "";
-        if (fs.existsSync("access_token.bin")) {
-            this.storedAccessToken = fs.readFileSync("access_token.bin").toString();
+    this._setupWebServer();
+  }
+
+  _setupWebServer() {
+    this.loginResolve = null;
+    this.webServer = express();
+    this.webServer.use(express.json());
+
+    this.webServer.get('/', (req, res) => {
+      res.sendFile(path.resolve('public/index.html'));
+    });
+
+    this.webServer.post('/access_token', (req, res) => {
+      if (!this.loginResolve) return;
+      const token = req.body.access_token;
+      this.setAccessToken(token);
+      this.validate(token)
+        .then(() => this.loginResolve())
+        .catch((err) => {
+          console.error('Token validation failed:', err);
+        });
+      res.sendStatus(200);
+    });
+
+    this.webServer.listen(this.webServerPort, () => {
+      console.log(`Callback server listening on port ${this.webServerPort}`);
+    });
+  }
+
+  setAccessToken(token) {
+    this.storedAccessToken = token;
+    fs.writeFileSync('access_token.bin', token, 'utf8');
+  }
+
+  validate(token) {
+    return new Promise((resolve, reject) => {
+      console.log('Validating token…');
+      const opts = {
+        hostname: 'id.twitch.tv',
+        port: 443,
+        path: '/oauth2/validate',
+        method: 'GET',
+        headers: { Authorization: `OAuth ${token}` },
+      };
+
+      const req = https.request(opts, (res) => {
+        if (res.statusCode === 401) {
+          // bad token → force login again
+          this.storedAccessToken = '';
+          this.login().then(resolve, reject);
+          return;
         }
 
-        this.loginResolve = null;
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          let body = '';
+          res.on('data', (c) => (body += c));
+          res.on('end', () => {
+            const meta = JSON.parse(body);
+            this.channelID   = meta.user_id;
+            this.channelName = meta.login;
+            console.log('Token valid for', this.channelName, `(ID: ${this.channelID})`);
+            resolve();
+          });
+        } else {
+          reject(new Error(`Unexpected validate status ${res.statusCode}`));
+        }
+      });
 
-        this.webServerPort = config.callbackPort;
-        this.webServer = express();
-        this.webServer.use(express.json());
-        this.webServer.get('/', (req, res) => {
-            res.sendFile(path.resolve("public/index.html"));
-        })
-        this.webServer.post('/access_token', (req, res) => {
-            if (this.loginResolve) {
-                this.setAccessToken(req.body.access_token);
+      req.on('error', reject);
+      req.end();
+    });
+  }
 
-                this.validate(this.storedAccessToken).then(() => {
-                    this.loginResolve();
-                });
-            }
-        })
-        this.webServer.listen(this.webServerPort);
+  login() {
+    return new Promise((resolve) => {
+      this.loginResolve = resolve;
+      const scopes = [
+        'bits:read',
+        'channel:read:subscriptions',
+        'channel:read:redemptions',
+        'channel_subscriptions',
+        'chat:read',
+      ];
+      
+      const authUrl = [
+        `https://id.twitch.tv/oauth2/authorize`,
+        `?client_id=${encodeURIComponent(this.appClientID)}`,
+        `&redirect_uri=${encodeURIComponent(this.redirectUri + ':' + this.webServerPort)}`,
+        `&response_type=token`,
+        `&scope=${encodeURIComponent(scopes.join(' '))}`,
+      ].join('');
+      opn(authUrl);
+    });
+  }
 
-        this.config = config;
+  authenticate() {
+    if (this.storedAccessToken) {
+      return this.validate(this.storedAccessToken);
     }
+    return this.login();
+  }
 
-    setAccessToken(token) {
-        this.storedAccessToken = token;
-        fs.writeFileSync("access_token.bin", this.storedAccessToken);
-    }
+  apiGetRequest(path) {
+    return new Promise((resolve, reject) => {
+      const opts = {
+        hostname: 'api.twitch.tv',
+        port: 443,
+        path,
+        method: 'GET',
+        headers: {
+          'Client-ID': this.appClientID,
+          Authorization: `Bearer ${this.storedAccessToken}`,
+        },
+      };
 
-    validate(token) {
-        const that = this;
-        return new Promise(resolve => {
+      const req = https.request(opts, (res) => {
+        if (res.statusCode === 401) {
+          return reject(new Error('Unauthorized; token may be invalid'));
+        }
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          let body = '';
+          res.on('data', (c) => (body += c));
+          res.on('end', () => resolve(JSON.parse(body)));
+        } else {
+          reject(new Error(`Unexpected API status ${res.statusCode}`));
+        }
+      });
 
-            console.log("Validating token...");
-            const options = {
-                hostname: "id.twitch.tv",
-                port: 443,
-                path: "/oauth2/validate",
-                method: "GET",
-                headers: {
-                    "Authorization": "OAuth " + token
-                }
-            };
-            const req = https.request(options, res => {
-                if (res.statusCode == 401) {
-                    // Invalid token
-                    that.storedAccessToken = "";
-                    that.login().then(() => {
-                        resolve();
-                    });
-                }
-                else if (res.statusCode >= 200 && res.statusCode < 203) {
-                    console.log("Twitch authentication token has been validated");
-                    // All good to go
-                    let str = "";
-                    res.on('data', function (chunk) {
-                        str += chunk;
-                    });
-                    res.on('end', function () {
-                        let obj = JSON.parse(str);
-                        that.channelID = obj.user_id;
-                        that.channelName = obj.login;
-                        resolve();
-                    });
-                }
-                else {
-                    throw new Error("Unexpected response from Twitch. Twitch responded with " + res.statusCode + " upon token validation.");
-                }
-            });
+      req.on('error', reject);
+      req.end();
+    });
+  }
 
-            req.on('error', (e) => {
-                throw new Error(e);
-            });
-            req.end();
-        });
-    }
+  tmiRequest(path) {
+    return new Promise((resolve, reject) => {
+      const opts = {
+        hostname: 'tmi.twitch.tv',
+        port: 443,
+        path,
+        method: 'GET',
+      };
+      const req = https.request(opts, (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          let body = '';
+          res.on('data', (c) => (body += c));
+          res.on('end', () => resolve(JSON.parse(body)));
+        } else {
+          reject(new Error(`TMI returned ${res.statusCode}`));
+        }
+      });
+      req.on('error', reject);
+      req.end();
+    });
+  }
 
-    login() {
-        return new Promise(resolve => {
-            this.loginResolve = resolve;
-            let scope = [
-                "bits:read",
-                "channel:read:subscriptions",
-                "channel:read:redemptions",
-                "channel_subscriptions",
-                "chat:read"//,
-                //"channel:moderate"
-            ]
-            opn("https://id.twitch.tv/oauth2/authorize?client_id=" + encodeURI(this.appClientID) + "&redirect_uri=" + encodeURI(this.redirectUri + ":" + this.webServerPort) + "&response_type=token&scope=" + encodeURI(scope.join(' ')));
-        });
-    }
+  connect() {
+    this.authenticate()
+      .then(() => {
+        console.log('✅ Twitch authentication complete');
+        this.app.addReadyFlag(1);
 
-    authenticate() {
-        return new Promise(resolve => {
-            if (this.storedAccessToken != null && this.storedAccessToken != "") {
-                this.validate(this.storedAccessToken).then(() => {
-                    resolve();
-                });
-            }
-            else {
-                this.login().then(() => {
-                    resolve();
-                });
-            }
-        });
-    }
+        // ensure we have a default WS endpoint if not set
+        if (!this.config.appConfig.EventSubHost) {
+          this.config.appConfig.EventSubHost = 'wss://eventsub.wss.twitch.tv/ws';
+        }
 
-    apiGetRequest(path) {
-        const that = this;
-        return new Promise(resolve => {
-            const options = {
-                hostname: "api.twitch.tv",
-                port: 443,
-                path: path,
-                method: "GET",
-                headers: {
-                    "Authorization": "Bearer " + that.storedAccessToken,
-                    "Client-ID": this.appClientID
-                }
-            };
-            const req = https.request(options, res => {
-                if (res.statusCode == 401) {
-                    // Invalid token
-                    console.log("Failed to access API. Restart the Relay");
+        // spin up your new EventSub listener
+        const eventSub = new EventSub(
+          this.config,
+          this.storedAccessToken,
+          this.channelID,
+          this
+        );
+        eventSub.connect();
 
-                    let str = "";
-                    res.on('data', function (chunk) {
-                        str += chunk;
-                    });
-                    res.on('end', function () {
-                        let obj = JSON.parse(str);
-                    });
-                    /*
-                    this.storedAccessToken = "";
-                    this.login().then(() => {
-                        resolve();
-                    });*/
-                }
-                else if (res.statusCode >= 200 && res.statusCode < 203) {
-                    // All good to go
-                    let str = "";
-                    res.on('data', function (chunk) {
-                        str += chunk;
-                    });
-                    res.on('end', function () {
-                        let obj = JSON.parse(str);
-                        resolve(obj);
-                    });
-                }
-                else {
-                    throw new Error("Unexpected response from Twitch. Twitch responded with " + res.statusCode + " upon " + path + ".");
-                }
-            });
-
-            req.on('error', (e) => {
-                throw new Error(e);
-            });
-            req.end();
-        });
-    }
-
-    tmiRequest(path) {
-        // tmi.twitch.tv/group/user/andrelczyk/chatters
-        const that = this;
-        return new Promise(resolve => {
-            const options = {
-                hostname: "tmi.twitch.tv",
-                port: 443,
-                path: path,
-                method: "GET"
-            };
-            const req = https.request(options, res => {
-                if (res.statusCode == 401) {
-                    // Invalid token
-                    console.log("Failed to access API");
-
-                    let str = "";
-                    res.on('data', function (chunk) {
-                        str += chunk;
-                    });
-                    res.on('end', function () {
-                        let obj = JSON.parse(str);
-                        console.log(obj);
-                    });
-                    /*
-                    this.storedAccessToken = "";
-                    this.login().then(() => {
-                        resolve();
-                    });*/
-                }
-                else if (res.statusCode >= 200 && res.statusCode < 203) {
-                    // All good to go
-                    let str = "";
-                    res.on('data', function (chunk) {
-                        str += chunk;
-                    });
-                    res.on('end', function () {
-                        let obj = JSON.parse(str);
-                        resolve(obj);
-                    });
-                }
-                else {
-                    throw new Error("Unexpected response from Twitch. Twitch responded with " + res.statusCode + " upon " + path + ".");
-                }
-            });
-
-            req.on('error', (e) => {
-                throw new Error(e);
-            });
-            req.end();
-        });
-    }
-
-    connect() {
-        this.authenticate().then(() => {
-            console.log("Completed Twitch authentication");
-            this.app.addReadyFlag(1);
-
-            let pubSub = new PubSub(this.config, this.storedAccessToken, this.channelID, this);
-            pubSub.connect();
-
-            let ircCom = new TwitchIRC(this.config, this.storedAccessToken, this.channelName, this);
-            ircCom.connect();
-
-            /*
-            this.apiGetRequest("/helix/kraken/channel").then((data) => {
-                console.log("helix get channel");
-                console.log(data);
-            });*/
-
-        }).catch(() => {
-            console.error("Failed Twitch authentication");
-        });
-    }
+        // if you still need IRC for chat:
+        // const ircCom = new TwitchIRC(
+        //   this.config,
+        //   this.storedAccessToken,
+        //   this.channelName,
+        //   this
+        // );
+        // ircCom.connect();
+      })
+      .catch((err) => {
+        console.error('❌ Failed Twitch authentication:', err);
+      });
+  }
 }
 
 module.exports = TwitchCom;

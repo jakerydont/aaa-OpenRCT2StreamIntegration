@@ -5,7 +5,7 @@ const App = require("./App");
 const appConfig = {
     appClientID: "xijp8ir7bscb5n7sfsuinlzw6c0k86",
     redirectUri: "http://localhost",
-    pubSubHost: "wss://pubsub-edge.twitch.tv"
+    EventSubHost:  "wss://eventsub.wss.twitch.tv/ws"
 }
 
 function loadConfig(file) {

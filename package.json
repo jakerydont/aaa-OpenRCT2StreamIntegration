@@ -18,13 +18,14 @@
   },
   "homepage": "https://github.com/oli414/OpenRCT2StreamIntegration#readme",
   "dependencies": {
-    "opn": "^6.0.0",
-    "tmi.js": "^1.5.0",
-    "websocket": "^1.0.32",
     "dotenv": "^16.0.0",
     "express": "^4.17.2",
+    "node-fetch": "^2.6.1",
+    "opn": "^6.0.0",
     "socket.io": "^4.4.1",
     "tiktok-live-connector": "^1.1.7",
-    "node-fetch": "^2.6.1"
+    "tmi.js": "^1.5.0",
+    "websocket": "^1.0.32",
+    "ws": "^8.18.3"
   }
 }
