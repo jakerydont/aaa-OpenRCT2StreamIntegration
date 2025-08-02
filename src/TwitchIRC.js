@@ -27,15 +27,19 @@ class TwitchIRC {
 
         this.client.on('message', (target, context, msg, self) => {
             if (self) return;
+            //console.log(context);
+            //console.log(msg);
 
-            if (that.usersInChat.indexOf(context["display-name"]) == -1) {
-                that.usersInChat.push(context["display-name"]);
-                that.twitchCom.app.triggerManager.trigger("VIEWER_JOINS", {
-                    message: "",
-                    username: context["display-name"],
-                    subscriber: false
-                });
-            }
+            // Check if chatting user is already in park or not.
+            // if (that.usersInChat.indexOf(context["display-name"]) == -1) {
+            //     that.usersInChat.push(context["display-name"]);
+            //     that.twitchCom.app.triggerManager.trigger("VIEWER_JOINS", {
+            //         message: "",
+            //         username: context["display-name"],
+            //         subscriber: false
+            //     });
+            // }
+
 
             that.twitchCom.app.triggerManager.trigger("COMMAND", {
                 message: msg,
