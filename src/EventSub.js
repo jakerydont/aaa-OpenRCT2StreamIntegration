@@ -180,6 +180,7 @@ this.socket.on('message', (raw) => {
 
   /** Dispatch incoming notifications into your triggerManager */
   _onNotification(data) {
+    console.log(data);
     const { subscription, event } = data;
 
     if (subscription.type === 'channel.channel_points_custom_reward_redemption.add') {

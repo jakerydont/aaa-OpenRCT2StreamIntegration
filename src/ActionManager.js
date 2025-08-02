@@ -93,6 +93,7 @@ class ActionManager {
          */
         const action = this.actions[actionIdentifier];
         if (action) {
+            console.log(`Triggering action ${JSON.stringify(action.identifier)} with params ${JSON.stringify(params)}`);
             action.trigger(params);
         }
         else {

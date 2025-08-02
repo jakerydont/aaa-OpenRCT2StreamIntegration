@@ -7,7 +7,7 @@ const path    = require('path');
 // only EventSub here, PubSub is gone
 const EventSub = require('./EventSub');
 // if you need IRC still, uncomment this
-// const TwitchIRC = require('./TwitchIRC');
+const TwitchIRC = require('./TwitchIRC');
 
 class TwitchCom {
   constructor(config, app) {
@@ -201,13 +201,13 @@ class TwitchCom {
         eventSub.connect();
 
         // if you still need IRC for chat:
-        // const ircCom = new TwitchIRC(
-        //   this.config,
-        //   this.storedAccessToken,
-        //   this.channelName,
-        //   this
-        // );
-        // ircCom.connect();
+        const ircCom = new TwitchIRC(
+          this.config,
+          this.storedAccessToken,
+          this.channelName,
+          this
+        );
+        ircCom.connect();
       })
       .catch((err) => {
         console.error('❌ Failed Twitch authentication:', err);
